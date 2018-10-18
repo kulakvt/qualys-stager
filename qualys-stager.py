@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 qualys-stager.py
-v0.3
-Updated on Fri Aug 17 12:39:18 EDT 2018
+v1.1
+Updated on Thu Oct 18 12:15:28 EDT 2018
 
 Written and tested using: Python 2.7.15, macOS 10.13.6 (17G65), Darwin 17.7.0
 
@@ -74,7 +74,18 @@ else:
                 if not ref:
                     raise Exception ('Nonstandard filetype detected')
                 dataHeaders.append(lines[7])
-                del lines[0:8]
+                del lines[:8] # Removes the header metadata
+                # This loop removes the trailing metadata and final blank line
+                # It also eliminates scans that reported no hosts
+                trailingMetadataIndexes = []
+                j = 0
+                for line in lines:
+                    if (',,,,"Target distribution across scanner appliances"' in line) or (',,,,"hosts not scanned, host not alive, ' in line):
+                        trailingMetadataIndexes.append(j)
+                    j = j + 1
+                for index in reversed(trailingMetadataIndexes):
+                    del lines[index]
+                del lines[-1:] # Removes the extra blankline at the end before combining
                 noHeaders.append(lines)
         except Exception as e:
             print '[-] Something\'s not quite right. Details:'
@@ -137,7 +148,7 @@ else:
             # Case for if all error checks have been passed
             else:
                 print '[+] Combining scans...'
-                combinedFile = 'combined-scans-' + str(time.time()) + '.csv'
+                combinedFile = 'combined-scans-' + str(time.time()).replace('.','-') + '.csv'
                 with open(outDirectory + '/' + combinedFile,'w+') as file:
                     file.write(dataHeader)
                     for scan in noHeaders:
